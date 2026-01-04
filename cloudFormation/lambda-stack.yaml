@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  CloudFormation template to deploy a Lambda function
+  that reads a value from SSM Parameter Store.
+
+Resources:
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: lambda-ssm-execution-role-cf
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaSSMReadPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: arn:aws:ssm:ap-south-1:*:parameter/assessment/*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  SsmReadLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: ssm-read-lambda-cf
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 10
+      MemorySize: 128
+      Code:
+        ZipFile: |
+          import boto3
+
+          def lambda_handler(event, context):
+              ssm = boto3.client('ssm')
+              response = ssm.get_parameter(
+                  Name='/assessment/db_password',
+                  WithDecryption=False
+              )
+              return {
+                  "statusCode": 200,
+                  "value": response['Parameter']['Value']
+              }

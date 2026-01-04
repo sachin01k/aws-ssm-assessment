@@ -35,9 +35,9 @@ Resources:
   SsmReadLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: ssm-read-lambda-cf
+      FunctionName: ssmReadLambdaValue
       Runtime: python3.9
-      Handler: index.lambda_handler
+      Handler: lambda_function.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 10
       MemorySize: 128

@@ -1,48 +1,38 @@
-# \# AWS SSM Lambda Assessment
+AWS SSM Lambda Assessment
+Overview
 
-# 
+This repository demonstrates a Python AWS Lambda function that securely retrieves configuration values from AWS Systems Manager (SSM) Parameter Store using least-privilege IAM permissions. The infrastructure is defined using AWS CloudFormation, with optional CI/CD automation via AWS CodePipeline.
 
-# \## Overview
+Lambda Function
+      |
+      v
+IAM Role (Least Privilege)
+      |
+      v
+AWS SSM Parameter Store
 
-# This project demonstrates a Python AWS Lambda function that retrieves
+1. Create SSM Parameter
+  aws ssm put-parameter
+    --name "/assessment/db_password"
+    --value "your-secure-password"
+    --type String
 
-# configuration values from AWS SSM Parameter Store using least-privilege IAM.
+2.Deploy CloudFormation Stack
+  aws cloudformation deploy
+  --template-file cloudformation/lambda-stack.yaml
+  --stack-name ssm-lambda-assessment
+  --capabilities CAPABILITY_NAMED_IAM
 
-# 
+3.Validation
+  Invoke the Lambda function from the AWS Console or CLI
+  Verify the parameter value is retrieved successfully
+  Check logs in CloudWatch Logs
 
-# \## Architecture
-
-# Lambda → IAM Role → SSM Parameter Store
-
-# 
-
-# \## Features
-
-# \- Secure parameter retrieval (no hardcoding)
-
-# \- Least privilege IAM policies
-
-# \- Infrastructure as Code using CloudFormation
-
-# \- CI/CD using AWS CodePipeline
-
-# 
-
-# \## Deployment
-
-# 1\. Create SSM parameter: `/assessment/db\_password`
-
-# 2\. Deploy CloudFormation stack:
-
-# &nbsp;  - `cloudformation/lambda-stack.yaml`
-
-# 3\. Validate Lambda execution
-
-# 
-
-# \## Cleanup
-
-# Delete CloudFormation stacks to avoid charges.
-
+3.Delete
+  aws cloudformation delete-stack \
+  --stack-name ssm-lambda-assessment
+  
+  aws ssm delete-parameter \
+  --name "/assessment/db_password"
 
 

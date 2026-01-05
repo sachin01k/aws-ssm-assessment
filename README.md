@@ -1,5 +1,5 @@
-AWS SSM Lambda Assessment
-Overview
+# AWS SSM Lambda Assessment
+# Overview
 
 This repository demonstrates a Python AWS Lambda function that securely retrieves configuration values from AWS Systems Manager (SSM) Parameter Store using least-privilege IAM permissions. The infrastructure is defined using AWS CloudFormation, with optional CI/CD automation via AWS CodePipeline.
 

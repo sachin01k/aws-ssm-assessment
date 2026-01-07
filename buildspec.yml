@@ -1,0 +1,17 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+
+  build:
+    commands:
+      - echo "Zipping lambda code"
+      - cd lambda
+      - zip -r ../lambda.zip .
+
+artifacts:
+  files:
+    - lambda.zip
+    - cloudformation/lambda-stack.yaml

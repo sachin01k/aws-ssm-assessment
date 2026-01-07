@@ -1,17 +1,22 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: CodePipeline to deploy Lambda CloudFormation stack
+Description: CloudFormation stack to create CodePipeline for Lambda deployment
 
 Parameters:
-  ArtifactBucketName:
+  SourceBucket:
     Type: String
-    Description: S3 bucket containing CloudFormation templates
+    Description: S3 bucket where source.zip is uploaded
+
+  ArtifactBucket:
+    Type: String
+    Description: S3 bucket for pipeline artifacts
 
 Resources:
 
+ 
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: codepipeline-service-role
+      RoleName: codepipeline-lambda-role
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -25,30 +30,56 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - cloudformation:CreateStack
-                  - cloudformation:UpdateStack
-                  - cloudformation:DescribeStacks
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - iam:PassRole
+                Action: "*"
                 Resource: "*"
 
-  Pipeline:
+  
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: codebuild-lambda-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "*"
+                Resource: "*"
+
+    LambdaBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: lambda-build-project
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        Type: LINUX_CONTAINER
+      Source:
+        Type: CODEPIPELINE
+
+  
+  LambdaPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: ssm-lambda-pipeline
+      Name: lambda-deployment-pipeline
       RoleArn: !GetAtt CodePipelineRole.Arn
       ArtifactStore:
         Type: S3
-        Location: !Ref ArtifactBucketName
+        Location: !Ref ArtifactBucket
       Stages:
+
+        
         - Name: Source
           Actions:
             - Name: SourceAction
@@ -57,13 +88,28 @@ Resources:
                 Owner: AWS
                 Provider: S3
                 Version: "1"
+              Configuration:
+                S3Bucket: !Ref SourceBucket
+                S3ObjectKey: source.zip
               OutputArtifacts:
                 - Name: SourceOutput
-              Configuration:
-                S3Bucket: !Ref ArtifactBucketName
-                S3ObjectKey: lambda-stack.yaml
-              RunOrder: 1
 
+        - Name: Build
+          Actions:
+            - Name: BuildLambda
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ProjectName: !Ref LambdaBuildProject
+
+       
         - Name: Deploy
           Actions:
             - Name: DeployLambda
@@ -73,10 +119,9 @@ Resources:
                 Provider: CloudFormation
                 Version: "1"
               InputArtifacts:
-                - Name: SourceOutput
+                - Name: BuildOutput
               Configuration:
                 ActionMode: CREATE_UPDATE
                 StackName: ssm-lambda-stack
-                TemplatePath: SourceOutput::lambda-stack.yaml
+                TemplatePath: BuildOutput::cloudformation/lambda-stack.yaml
                 Capabilities: CAPABILITY_NAMED_IAM
-              RunOrder: 1

@@ -1,14 +1,21 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: >
-  CloudFormation template to deploy a Lambda function
-  that reads a value from SSM Parameter Store.
+Description: Lambda that reads value from SSM Parameter Store
+
+Parameters:
+  ArtifactBucket:
+    Type: String
+    Description: S3 bucket containing lambda zip
+
+  SSMParameterName:
+    Type: String
+    Default: /assessment/db_password
 
 Resources:
 
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: lambda-ssm-execution-role-cf
+      RoleName: lambda-ssm-execution-role
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -24,7 +31,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - ssm:GetParameter
-                Resource: arn:aws:ssm:ap-south-1:*:parameter/assessment/*
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/assessment/*
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -37,21 +44,13 @@ Resources:
     Properties:
       FunctionName: ssmReadLambdaValue
       Runtime: python3.9
-      Handler: lambda_function.lambda_handler
+      Handler: handler.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 10
       MemorySize: 128
       Code:
-        ZipFile: |
-          import boto3
-
-          def lambda_handler(event, context):
-              ssm = boto3.client('ssm')
-              response = ssm.get_parameter(
-                  Name='/assessment/db_password',
-                  WithDecryption=False
-              )
-              return {
-                  "statusCode": 200,
-                  "value": response['Parameter']['Value']
-              }
+        S3Bucket: !Ref ArtifactBucket
+        S3Key: lambda.zip
+      Environment:
+        Variables:
+          SSM_PARAMETER_NAME: !Ref SSMParameterName

@@ -1,21 +1,19 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: CloudFormation stack to create CodePipeline for Lambda deployment
+Description: CodePipeline to build and deploy Lambda using CloudFormation
 
 Parameters:
   SourceBucket:
     Type: String
-    Description: S3 bucket where source.zip is uploaded
+    Description: S3 bucket where source.zip is uploaded (must be versioned for S3 Source action)
 
   ArtifactBucket:
     Type: String
-    Description: S3 bucket for pipeline artifacts
+    Description: S3 bucket for CodePipeline artifacts
 
 Resources:
-
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: codepipeline-lambda-role
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -28,14 +26,51 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              # Read source.zip from SourceBucket
               - Effect: Allow
-                Action: "*"
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+                Resource:
+                  - !Sub "arn:aws:s3:::${SourceBucket}"
+                  - !Sub "arn:aws:s3:::${SourceBucket}/*"
+
+              # Read/write artifacts to ArtifactBucket
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource:
+                  - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+
+              # Allow pipeline to run CodeBuild
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                Resource: !GetAtt LambdaBuildProject.Arn
+
+              # Allow pipeline to call CloudFormation for the deploy action
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:GetTemplateSummary
                 Resource: "*"
+
+              # IMPORTANT: allow CodePipeline to pass the execution role to CloudFormation
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt CloudFormationExecutionRole.Arn
 
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: codebuild-lambda-role
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -48,6 +83,32 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+              # If you ever switch CodeBuild artifacts from CODEPIPELINE to S3,
+              # you'll need S3 permissions here; leaving minimal for now.
+
+  CloudFormationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudFormationExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # For assessment speed this is permissive; tighten to least-privilege after it works.
               - Effect: Allow
                 Action: "*"
                 Resource: "*"
@@ -75,7 +136,6 @@ Resources:
         Type: S3
         Location: !Ref ArtifactBucket
       Stages:
-
         - Name: Source
           Actions:
             - Name: SourceAction
@@ -118,5 +178,6 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 StackName: ssm-lambda-stack
-                TemplatePath: BuildOutput::cloudformation/lambda-stack.yaml
                 Capabilities: CAPABILITY_NAMED_IAM
+                TemplatePath: BuildOutput::cloudFormation/lambda-stack.yaml
+                RoleArn: !GetAtt CloudFormationExecutionRole.Arn

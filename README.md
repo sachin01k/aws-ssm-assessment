@@ -35,4 +35,6 @@ AWS SSM Parameter Store
   aws ssm delete-parameter \
   --name "/assessment/db_password"
 
+aws s3 cp source.zip s3://YOUR_BUCKET_NAME/source.zip
+aws s3 ls s3://YOUR_BUCKET_NAME/ --human-readable --summarize
 

@@ -1,39 +1,65 @@
-# AWS SSM Lambda Assessment
-# Overview
+# AWS Lambda SSM Reader with CI/CD (CloudFormation + CodePipeline)
 
+## Overview
 This repository demonstrates a Python AWS Lambda function that securely retrieves configuration values from AWS Systems Manager (SSM) Parameter Store using least-privilege IAM permissions. The infrastructure is defined using AWS CloudFormation, with optional CI/CD automation via AWS CodePipeline.
 
-Lambda Function
-      |
-      v
-IAM Role (Least Privilege)
-      |
-      v
-AWS SSM Parameter Store
+The Lambda function reads a value from **AWS SSM Parameter Store** and returns it.
 
-1. Create SSM Parameter
-  aws ssm put-parameter
-    --name "/assessment/db_password"
-    --value "your-secure-password"
-    --type String
+---
 
-2.Deploy CloudFormation Stack
-  aws cloudformation deploy
-  --template-file cloudformation/lambda-stack.yaml
-  --stack-name ssm-lambda-assessment
-  --capabilities CAPABILITY_NAMED_IAM
+## Architecture
 
-3.Validation
-  Invoke the Lambda function from the AWS Console or CLI
-  Verify the parameter value is retrieved successfully
-  Check logs in CloudWatch Logs
+- AWS Lambda (Python 3.x)
+- AWS SSM Parameter Store
+- AWS IAM (Least privilege)
+- AWS CodePipeline
+- AWS CodeBuild
+- AWS CloudFormation
 
-3.Delete
-  aws cloudformation delete-stack \
-  --stack-name ssm-lambda-assessment
-  
-  aws ssm delete-parameter \
-  --name "/assessment/db_password"
+---
+
+## 🔄 CI/CD Flow
+
+1. Source code is uploaded to S3 as `source.zip`
+2. CodePipeline is triggered
+3. CodeBuild packages Lambda code into `lambda.zip`
+4. CloudFormation deploy stage creates/updates Lambda stack
+5. Lambda reads value from SSM Parameter Store
+
+---
+
+## Security & Best Practices
+
+- IAM roles follow **principle of least privilege**
+- No hardcoded credentials
+- SSM parameter name passed via environment variable
+- Infrastructure managed entirely using CloudFormation
+- Easy cleanup by deleting CloudFormation stacks
+
+---
+
+## Example Lambda Response
+
+```json
+{
+  "statusCode": 200,
+  "value": "root"
+}
+```
+
+## Description
+This PR implements an AWS Lambda function that reads values from SSM Parameter Store.
+The deployment is automated using AWS CodePipeline and CloudFormation following IaC best practices.
+
+## Key Features
+- Lambda written in Python 3.x
+- IAM roles with least privilege
+- CloudFormation for infrastructure
+- CodePipeline with CloudFormation deploy stage
+
+## Cleanup
+All resources can be removed by deleting the CloudFormation stacks.
+
 
 aws s3 cp source.zip s3://YOUR_BUCKET_NAME/source.zip
 aws s3 ls s3://YOUR_BUCKET_NAME/ --human-readable --summarize

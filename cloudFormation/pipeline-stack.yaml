@@ -137,18 +137,20 @@ Resources:
         Location: !Ref ArtifactBucket
       Stages:
         - Name: Source
-          Actions:
-            - Name: SourceAction
-              ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Provider: S3
-                Version: "1"
-              Configuration:
-                S3Bucket: !Ref SourceBucket
-                S3ObjectKey: source.zip
-              OutputArtifacts:
-                - Name: SourceOutput
+            Actions:
+              - Name: SourceAction
+                RoleArn: !GetAtt CodePipelineRole.Arn
+                ActionTypeId:
+                  Category: Source
+                  Owner: AWS
+                  Provider: S3
+                  Version: "1"
+                Configuration:
+                  S3Bucket: !Ref SourceBucket
+                  S3ObjectKey: source.zip
+                  PollForSourceChanges: true
+                OutputArtifacts:
+                  - Name: SourceOutput
 
         - Name: Build
           Actions:

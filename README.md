@@ -61,6 +61,4 @@ The deployment is automated using AWS CodePipeline and CloudFormation following 
 All resources can be removed by deleting the CloudFormation stacks.
 
 
-aws s3 cp source.zip s3://YOUR_BUCKET_NAME/source.zip
-aws s3 ls s3://YOUR_BUCKET_NAME/ --human-readable --summarize
 

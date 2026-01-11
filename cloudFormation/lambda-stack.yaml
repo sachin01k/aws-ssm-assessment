@@ -50,7 +50,7 @@ Resources:
       Timeout: 10
       MemorySize: 128
       Code:
-        S3Bucket: !Ref ArtifactBucket
+        S3Bucket: my-lambda-source-12345
         S3Key: lambda.zip
       Environment:
         Variables:

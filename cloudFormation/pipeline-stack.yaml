@@ -12,9 +12,6 @@ Parameters:
 
 Resources:
 
-  ############################
-  # CodePipeline Service Role
-  ############################
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -31,6 +28,8 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+
+              # Read source from S3
               - Effect: Allow
                 Action:
                   - s3:GetObject
@@ -40,20 +39,22 @@ Resources:
                   - !Sub arn:aws:s3:::${SourceBucket}
                   - !Sub arn:aws:s3:::${SourceBucket}/*
 
+              # Write artifacts to artifact bucket
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                  - s3:GetObjectVersion
                   - s3:PutObject
                 Resource:
                   - !Sub arn:aws:s3:::${ArtifactBucket}/*
 
+              # Trigger CodeBuild
               - Effect: Allow
                 Action:
                   - codebuild:StartBuild
                   - codebuild:BatchGetBuilds
                 Resource: !GetAtt LambdaBuildProject.Arn
 
+              # CloudFormation deploy permissions (CHANGESETS INCLUDED)
               - Effect: Allow
                 Action:
                   - cloudformation:CreateStack
@@ -62,15 +63,16 @@ Resources:
                   - cloudformation:DescribeStacks
                   - cloudformation:DescribeStackEvents
                   - cloudformation:GetTemplateSummary
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DeleteChangeSet
                 Resource: "*"
 
+              # Allow passing CF execution role
               - Effect: Allow
                 Action: iam:PassRole
                 Resource: !GetAtt CloudFormationExecutionRole.Arn
 
-  ############################
-  # CodeBuild Role
-  ############################
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
@@ -87,6 +89,7 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              # Logs
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -94,9 +97,15 @@ Resources:
                   - logs:PutLogEvents
                 Resource: "*"
 
-  ############################
-  # CloudFormation Execution Role
-  ############################
+              # Read source + upload artifacts
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource:
+                  - !Sub arn:aws:s3:::${SourceBucket}/*
+                  - !Sub arn:aws:s3:::${ArtifactBucket}/*
+
   CloudFormationExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -114,12 +123,15 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action: "*"
+                Action:
+                  - lambda:*
+                  - iam:*
+                  - ssm:*
+                  - logs:*
+                  - cloudformation:*
+                  - s3:*
                 Resource: "*"
 
-  ############################
-  # CodeBuild Project
-  ############################
   LambdaBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -134,9 +146,6 @@ Resources:
       Source:
         Type: CODEPIPELINE
 
-  ############################
-  # CodePipeline
-  ############################
   LambdaPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -147,6 +156,7 @@ Resources:
         Location: !Ref ArtifactBucket
       Stages:
 
+        # ---------- SOURCE ----------
         - Name: Source
           Actions:
             - Name: SourceAction
@@ -158,10 +168,11 @@ Resources:
               Configuration:
                 S3Bucket: !Ref SourceBucket
                 S3ObjectKey: source.zip
-                PollForSourceChanges: true
+                PollForSourceChanges: false
               OutputArtifacts:
                 - Name: SourceOutput
 
+        # ---------- BUILD ----------
         - Name: Build
           Actions:
             - Name: BuildLambda
@@ -177,6 +188,7 @@ Resources:
               Configuration:
                 ProjectName: !Ref LambdaBuildProject
 
+        # ---------- DEPLOY ----------
         - Name: Deploy
           Actions:
             - Name: DeployLambda

@@ -1,14 +1,15 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Lambda that reads value from SSM Parameter Store
+Description: Lambda function that reads value from AWS SSM Parameter Store
 
 Parameters:
   ArtifactBucket:
     Type: String
-    Description: S3 bucket containing lambda zip
+    Description: S3 bucket containing the Lambda deployment package (lambda.zip)
 
   SSMParameterName:
     Type: String
     Default: /assessment/db_password
+    Description: Name of the SSM parameter to read
 
 Resources:
 
@@ -28,10 +29,13 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              # Read SSM parameter
               - Effect: Allow
                 Action:
                   - ssm:GetParameter
                 Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/assessment/*
+
+              # Write logs
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -44,7 +48,7 @@ Resources:
     Properties:
       FunctionName: ssmReadLambdaValue
       Runtime: python3.9
-      Handler: handler.lambda_handler
+      Handler: lambda_function.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 10
       MemorySize: 128
@@ -54,3 +58,8 @@ Resources:
       Environment:
         Variables:
           SSM_PARAMETER_NAME: !Ref SSMParameterName
+
+Outputs:
+  LambdaFunctionName:
+    Description: Name of the deployed Lambda function
+    Value: !Ref SsmReadLambda

@@ -8,7 +8,7 @@ phases:
       - zip ../lambda.zip lambda_function.py
       - cd ..
       - echo "Uploading lambda.zip to artifact bucket"
-      - aws s3 cp lambda.zip s3://YOUR_ARTIFACT_BUCKET_NAME/lambda.zip
+      - aws s3 cp lambda.zip s3://my-lambda-source-12345/lambda.zip
 
 artifacts:
   files:

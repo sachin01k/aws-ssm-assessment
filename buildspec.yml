@@ -6,7 +6,9 @@ phases:
       - echo "Packaging Lambda"
       - pwd
       - ls -la
-      - zip -r lambda.zip lambda
+      - cd lambda
+      - zip ../lambda.zip lambda_function.py
+      - cd ..
 
 artifacts:
   files:

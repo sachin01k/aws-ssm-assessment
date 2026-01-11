@@ -190,18 +190,20 @@ Resources:
 
         # ---------- DEPLOY ----------
         - Name: Deploy
-          Actions:
-            - Name: DeployLambda
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Provider: CloudFormation
-                Version: "1"
-              RoleArn: !GetAtt CloudFormationExecutionRole.Arn
-              InputArtifacts:
-                - Name: BuildOutput
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                StackName: ssm-lambda-stack
-                Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::cloudformation/lambda-stack.yaml
+            Actions:
+              - Name: DeployLambda
+                ActionTypeId:
+                  Category: Deploy
+                  Owner: AWS
+                  Provider: CloudFormation
+                  Version: "1"
+                InputArtifacts:
+                  - Name: BuildOutput
+                Configuration:
+                  ActionMode: CREATE_UPDATE
+                  StackName: ssm-lambda-stack
+                  Capabilities: CAPABILITY_NAMED_IAM
+                  TemplatePath: BuildOutput::cloudformation/lambda-stack.yaml
+                  RoleArn: arn:aws:iam::4604-4298-2907:role/cloudformation-execution-role
+
+

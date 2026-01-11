@@ -205,5 +205,6 @@ Resources:
                   Capabilities: CAPABILITY_NAMED_IAM
                   TemplatePath: BuildOutput::cloudformation/lambda-stack.yaml
                   RoleArn: arn:aws:iam::4604-4298-2907:role/cloudformation-execution-role
+                  
 
 

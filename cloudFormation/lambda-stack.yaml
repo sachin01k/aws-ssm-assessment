@@ -5,7 +5,6 @@ Parameters:
   SSMParameterName:
     Type: String
     Default: /assessment/db_password
-    Description: Name of the SSM parameter to read
 
 Resources:
 
@@ -47,12 +46,7 @@ Resources:
       MemorySize: 128
       Code:
         ZipFile: |
-          # Lambda code is provided by CodePipeline build artifact
+          # Code will be injected by CodePipeline artifact
       Environment:
         Variables:
-          SSM_PARAMETER_NAME: !Ref SSMParameterName
-
-Outputs:
-  LambdaFunctionName:
-    Description: Name of the deployed Lambda function
-    Value: !Ref SsmReadLambda
+          SSM_PARAMETER_NAME: /assessment/db_password

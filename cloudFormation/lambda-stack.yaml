@@ -2,10 +2,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: Lambda function that reads value from AWS SSM Parameter Store
 
 Parameters:
-  ArtifactBucket:
-    Type: String
-    Description: S3 bucket containing the Lambda deployment package (lambda.zip)
-
   SSMParameterName:
     Type: String
     Default: /assessment/db_password
@@ -29,13 +25,10 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              # Read SSM parameter
               - Effect: Allow
                 Action:
                   - ssm:GetParameter
                 Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/assessment/*
-
-              # Write logs
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -53,8 +46,8 @@ Resources:
       Timeout: 10
       MemorySize: 128
       Code:
-        S3Bucket: !Ref ArtifactBucket
-        S3Key: lambda.zip
+        ZipFile: |
+          # Lambda code is provided by CodePipeline build artifact
       Environment:
         Variables:
           SSM_PARAMETER_NAME: !Ref SSMParameterName
